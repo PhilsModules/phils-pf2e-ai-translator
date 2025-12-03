@@ -1,6 +1,6 @@
 import { loc, resolvePrompt, getCleanData, getContextDescription, getGlossaryContent, processUpdate, addToGlossary, MODULE_ID, injectOfficialTranslations } from './TranslationLogic.js';
 
-const { FormApplication, Dialog, JournalEntry, JournalEntryPage, foundry, game, ui, $ } = /** @type {any} */ (globalThis);
+const { FormApplication, Dialog, JournalEntry, JournalEntryPage } = /** @type {any} */ (globalThis);
 
 const THEMES = {
     gemini: { url: "https://gemini.google.com/app" },

@@ -3,10 +3,20 @@
 ![Foundry v13 Compatible](https://img.shields.io/badge/Foundry-v13-brightgreen)
 ![Foundry v12 Compatible](https://img.shields.io/badge/Foundry-v12-green)
 ![License](https://img.shields.io/badge/License-GPLv3-blue)
-![Version](https://img.shields.io/badge/Version-1.0.2-orange)
+![Version](https://img.shields.io/badge/Version-1.0.3-orange)
 [![Patreon](https://img.shields.io/badge/Support-Patreon-ff424d?logo=patreon)](https://www.patreon.com/PhilsModules)
 
 **Phil's Pf2e Ai Translator** allows you to translate entire Journals in Foundry VTT using modern AI (Google Gemini, ChatGPT, Claude, Copilot, Perplexity).
+
+## Changelog
+**v1.0.3**
+*   **Bugfix:** Fixed a critical `TypeError` during module initialization where global variables (`game`, `ui`, etc.) were accessed before they were defined.
+*   **Improvement:** Enhanced stability of the translation dialog startup.
+
+**v1.0.2**
+*   **Feature:** Added support for multiple AI providers (Gemini, ChatGPT, Claude, Copilot, Perplexity).
+*   **Feature:** Added Glossary support for consistent terminology.
+*   **Feature:** Added Batch Translation for multiple pages.
 
 The core feature: **You don't need expensive API keys!**
 The module acts as an intelligent "Prompt Engineer". It prepares the text from your Journal pages, creates the perfect prompt for the AI, and you simply copy it into the chat window of your favorite AI service.
