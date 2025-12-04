@@ -1,5 +1,8 @@
-![Foundry v12](https://img.shields.io/badge/foundry-v12-green)
-![Version](https://img.shields.io/badge/version-1.1.4-blue)
+![Foundry v13 Compatible](https://img.shields.io/badge/Foundry-v13-brightgreen)
+![Foundry v12 Compatible](https://img.shields.io/badge/Foundry-v12-green)
+![License](https://img.shields.io/badge/License-GPLv3-blue)
+![Version](https://img.shields.io/badge/Version-1.1.4-orange)
+[![Patreon](https://img.shields.io/badge/Support-Patreon-ff424d?logo=patreon)](https://www.patreon.com/PhilsModules)
 
 # Phil's PF2e AI Translator
 
@@ -138,3 +141,4 @@ This module is licensed under the [GPL-3.0 License](LICENSE).
     </a>
     <p>Made with ❤️ for the Foundry VTT Community</p>
 </div>
+
