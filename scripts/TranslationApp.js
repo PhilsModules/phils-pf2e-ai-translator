@@ -84,9 +84,47 @@ export class TranslationAssistant extends FormApplication {
                         return;
                     }
 
+                    // 1. Get Root Journals (no folder)
+                    const rootJournals = journals.filter(j => !j.folder).sort((a, b) => (a.sort || 0) - (b.sort || 0));
+
+                    // 2. Map Folders to Journals
+                    const folderMap = {};
+                    journals.filter(j => j.folder).forEach(j => {
+                        if (!folderMap[j.folder.id]) folderMap[j.folder.id] = [];
+                        folderMap[j.folder.id].push(j);
+                    });
+
+                    // 3. Sort journals within folders
+                    for (const folderId in folderMap) {
+                        folderMap[folderId].sort((a, b) => (a.sort || 0) - (b.sort || 0));
+                    }
+
+                    // 4. Get sorted list of folders (respecting sidebar sort)
+                    const sortedFolders = game.folders.filter(f => f.type === "JournalEntry").sort((a, b) => (a.sort || 0) - (b.sort || 0));
+
                     let options = "";
-                    journals.forEach(j => {
-                        options += `<option value="${j.id}">${j.name}</option>`;
+
+                    // 5. Build Options
+                    // Root Journals first
+                    if (rootJournals.length > 0) {
+                        const labelUnsorted = loc('LabelUnsorted');
+                        const finalLabel = (labelUnsorted === 'LabelUnsorted') ? 'Unsorted' : labelUnsorted;
+                        options += `<optgroup label="${finalLabel}">`;
+                        rootJournals.forEach(j => {
+                            options += `<option value="${j.id}">${j.name}</option>`;
+                        });
+                        options += `</optgroup>`;
+                    }
+
+                    // Folders
+                    sortedFolders.forEach(f => {
+                        if (folderMap[f.id]) {
+                            options += `<optgroup label="${f.name}">`;
+                            folderMap[f.id].forEach(j => {
+                                options += `<option value="${j.id}">${j.name}</option>`;
+                            });
+                            options += `</optgroup>`;
+                        }
                     });
 
                     const selectContent = `
@@ -309,17 +347,19 @@ async function prepareTranslatePrompt(doc, userPrompt, systemName, sendFull, tar
     const cleanData = getCleanData(doc, sendFull, selectedPages);
     const { docData: translatedData, replacedTerms } = await injectOfficialTranslations(cleanData);
     const jsonString = JSON.stringify(translatedData, null, 2);
-    const glossaryContent = getGlossaryContent();
+    // Glossary content is no longer needed in the prompt as we use inline replacements
+    const glossaryContent = "";
     let promptKey = "TranslateAndCreateGlossary";
-    if (glossaryContent && glossaryContent.length > 10) promptKey = "TranslateWithGlossary";
+    // Check if glossary exists to determine prompt key, but don't load content
+    const glossaryExists = game.journal.some(j => j.name === "AI Glossary" || j.name === "AI Glossar");
+    if (glossaryExists) promptKey = "TranslateWithGlossary";
 
+    // Replaced terms list is also no longer needed as separate list
     let replacedTermsList = "";
-    if (replacedTerms && replacedTerms.length > 0) {
-        replacedTermsList = replacedTerms.map(t => `- ${t.original} -> ${t.translation}`).join("\n");
-    }
 
     const defaultPrompt = loc('DefaultTranslate') || "Translate.";
-    const finalPrompt = resolvePrompt(promptKey, { systemName, jsonString, userPrompt: userPrompt || defaultPrompt, glossaryContent: glossaryContent || "", replacedTermsList });
+    // We pass empty strings for glossaryContent and replacedTermsList as they are now inline
+    const finalPrompt = resolvePrompt(promptKey, { systemName, jsonString, userPrompt: userPrompt || defaultPrompt, glossaryContent: "", replacedTermsList: "" });
     const expectGlossaryCreation = (promptKey === "TranslateAndCreateGlossary");
     const expectGlossaryUpdate = (promptKey === "TranslateWithGlossary");
     copyAndOpen(finalPrompt, doc, true, targetUrl, expectGlossaryCreation, expectGlossaryUpdate, false);
@@ -334,13 +374,11 @@ async function prepareGlossaryGenPrompt(doc, userPrompt, systemName, sendFull, t
 
     const textContent = getContextDescription(doc, translatedData);
 
+    // Replaced terms are inline, no list needed
     let replacedTermsList = "";
-    if (replacedTerms && replacedTerms.length > 0) {
-        replacedTermsList = replacedTerms.map(t => `- ${t.original} -> ${t.translation}`).join("\n");
-    }
 
     const defaultPrompt = loc('DefaultGlossary') || "Create a list of important terms.";
-    const finalPrompt = resolvePrompt("GenerateGlossary", { systemName, docDesc: textContent, userPrompt: userPrompt || defaultPrompt, replacedTermsList });
+    const finalPrompt = resolvePrompt("GenerateGlossary", { systemName, docDesc: textContent, userPrompt: userPrompt || defaultPrompt, replacedTermsList: "" });
     copyAndOpen(finalPrompt, doc, true, targetUrl, false, false, true);
 }
 

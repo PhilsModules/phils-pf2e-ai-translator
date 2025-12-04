@@ -56,7 +56,7 @@ export async function injectOfficialTranslations(docData) {
 
     // Helper to process text recursively or specific fields
     const processContent = (text) => {
-        const result = TermReplacer.replaceTerms(text, dictionary);
+        const result = TermReplacer.replaceTerms(text, dictionary, true); // Enable appendOriginal
         if (result.replaced) {
             result.replaced.forEach(item => allReplacedTerms.set(item.original, item.translation));
         }
@@ -231,6 +231,26 @@ export async function processUpdate(doc, rawText) {
             const jsonData = translationJson;
             delete jsonData._id;
 
+            // --- CLEANUP START ---
+            // Recursively remove %%Original%% markers from all string values in the object
+            const cleanObjectStrings = (obj) => {
+                if (typeof obj === 'string') {
+                    return obj.replace(/\s?%%.*?%%/g, "");
+                } else if (Array.isArray(obj)) {
+                    return obj.map(item => cleanObjectStrings(item));
+                } else if (typeof obj === 'object' && obj !== null) {
+                    for (const key in obj) {
+                        obj[key] = cleanObjectStrings(obj[key]);
+                    }
+                    return obj;
+                }
+                return obj;
+            };
+
+            // Apply cleanup to the entire JSON data
+            cleanObjectStrings(jsonData);
+            // --- CLEANUP END ---
+
             if (doc.documentName === "JournalEntry" && jsonData.pages && jsonData.name !== "AI Glossary") {
                 const backupName = `${doc.name} (Backup)`;
                 const existingBackup = game.journal.find(j => j.name === backupName);
@@ -269,6 +289,48 @@ export async function processUpdate(doc, rawText) {
             }
 
             if (jsonData.type && jsonData.type !== doc.type) ui.notifications.warn(loc('WarnTypeChange') || `Achtung: Type-Change!`);
+
+            // --- ID VERIFICATION START ---
+            let validationErrors = [];
+
+            // 0. Verify Root ID (if present)
+            if (jsonData._id && jsonData._id !== doc.id) {
+                validationErrors.push(`Root ID Mismatch: Expected '${doc.id}', found '${jsonData._id}'. (The AI tried to change the Document ID.)`);
+            }
+
+            // DEEP ID CHECK (Recursive)
+            const validIds = collectAllIds(doc.toObject());
+            // Also allow the ID of the document itself if not in toObject (though it usually is)
+            validIds.add(doc.id);
+
+            const deepValidationErrors = validateDeepIds(jsonData, validIds);
+            if (deepValidationErrors.length > 0) {
+                validationErrors.push(...deepValidationErrors);
+            }
+
+            // Inline Link Verification (@Type[id])
+            // We still run this because it checks for *missing* IDs in the text content, which deep check doesn't cover (deep check only validates existence of IDs *in the structure*).
+            if (doc.documentName === "JournalEntry" && jsonData.pages) {
+                for (const newPage of jsonData.pages) {
+                    const originalPage = doc.pages.get(newPage._id);
+                    if (originalPage && newPage.text?.content) {
+                        const result = validateIds(originalPage.text.content, newPage.text.content);
+                        if (!result.valid) {
+                            if (result.missing.length > 0) validationErrors.push(`Page '${originalPage.name}': Missing IDs in text: ${result.missing.join(", ")}`);
+                            if (result.hallucinated.length > 0) validationErrors.push(`Page '${originalPage.name}': Hallucinated IDs in text: ${result.hallucinated.join(", ")}`);
+                        }
+                    }
+                }
+            }
+
+            if (validationErrors.length > 0) {
+                const errorMsg = "ID Verification Failed:\n" + validationErrors.join("\n");
+                console.warn(errorMsg);
+                ui.notifications.error("Translation rejected due to ID errors. Check console for details.");
+                return errorMsg;
+            }
+            // --- ID VERIFICATION END ---
+
             await doc.update(jsonData);
             ui.notifications.success(loc('Success', { docName: doc.name }));
         }
@@ -279,6 +341,110 @@ export async function processUpdate(doc, rawText) {
         console.error(e);
         return e.message;
     }
+}
+
+function extractIds(text) {
+    if (!text) return [];
+    // Matches @Type[id] or @Type[id]{label}
+    // We only care about the Type and ID for verification
+    const regex = /@([a-zA-Z]+)\[([^\]]+)\]/g;
+    const ids = [];
+    for (const match of text.matchAll(regex)) {
+        ids.push({
+            full: match[0],
+            type: match[1],
+            id: match[2]
+        });
+    }
+    return ids;
+}
+
+function validateIds(originalText, translatedText) {
+    const originalIds = extractIds(originalText);
+    const translatedIds = extractIds(translatedText);
+
+    // Create maps for counting occurrences
+    const countIds = (list) => {
+        const map = new Map();
+        list.forEach(item => {
+            const key = `${item.type}[${item.id}]`;
+            map.set(key, (map.get(key) || 0) + 1);
+        });
+        return map;
+    };
+
+    const originalMap = countIds(originalIds);
+    const translatedMap = countIds(translatedIds);
+
+    const missing = [];
+    const hallucinated = [];
+
+    // Check for missing IDs
+    for (const [key, count] of originalMap.entries()) {
+        const transCount = translatedMap.get(key) || 0;
+        if (transCount < count) {
+            missing.push(`${key} (Expected: ${count}, Found: ${transCount})`);
+        }
+    }
+
+    // Check for hallucinated IDs
+    for (const [key, count] of translatedMap.entries()) {
+        const origCount = originalMap.get(key) || 0;
+        if (count > origCount) {
+            hallucinated.push(`${key} (Original: ${origCount}, Found: ${count})`);
+        }
+    }
+
+    return {
+        valid: missing.length === 0 && hallucinated.length === 0,
+        missing,
+        hallucinated
+    };
+}
+
+function collectAllIds(obj, ids = new Set()) {
+    if (!obj || typeof obj !== 'object') return ids;
+
+    if (Array.isArray(obj)) {
+        obj.forEach(item => collectAllIds(item, ids));
+    } else {
+        if (obj._id) ids.add(obj._id);
+        if (obj.id) ids.add(obj.id); // Some systems/modules use 'id'
+
+        for (const key in obj) {
+            if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                collectAllIds(obj[key], ids);
+            }
+        }
+    }
+    return ids;
+}
+
+function validateDeepIds(json, validIds, errors = [], path = "") {
+    if (!json || typeof json !== 'object') return errors;
+
+    if (Array.isArray(json)) {
+        json.forEach((item, index) => validateDeepIds(item, validIds, errors, `${path}[${index}]`));
+    } else {
+        // Check _id
+        if (json._id && !validIds.has(json._id)) {
+            errors.push(`Unknown ID found at ${path}._id: '${json._id}'`);
+        }
+        // Check id (only if it looks like a Foundry ID - 16 chars alphanumeric, or if it was in the original)
+        // We be strict: if it's called "id" and it's a string, we check it.
+        if (json.id && typeof json.id === 'string' && !validIds.has(json.id)) {
+            // Optional: Filter out non-ID strings if "id" is used for something else?
+            // But usually "id" is an ID.
+            errors.push(`Unknown ID found at ${path}.id: '${json.id}'`);
+        }
+
+        for (const key in json) {
+            if (Object.prototype.hasOwnProperty.call(json, key)) {
+                validateDeepIds(json[key], validIds, errors, path ? `${path}.${key}` : key);
+            }
+        }
+    }
+    return errors;
 }
 
 export async function addToGlossary(newItems) {

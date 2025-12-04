@@ -1,5 +1,5 @@
 ![Foundry v12](https://img.shields.io/badge/foundry-v12-green)
-![Version](https://img.shields.io/badge/version-1.1.2-blue)
+![Version](https://img.shields.io/badge/version-1.1.3-blue)
 
 # Phil's PF2e AI Translator
 
@@ -8,6 +8,17 @@
 Dieses Modul hilft dir, **große Abenteuer-Module** oder lange Texte in Foundry VTT schnell und konsistent zu übersetzen. Es ist speziell für **PF2e** optimiert, funktioniert aber auch systemunabhängig.
 
 ---
+
+## 🚀 Features (v1.1.3 Update)
+
+*   **NEU: Deep ID Check (Sicherheit):**
+    *   Das Modul prüft nun **rekursiv jede einzelne ID** in der KI-Antwort gegen das Original-Dokument.
+    *   Verhindert, dass die KI versehentlich interne IDs (z.B. von `pdftofoundry`) erfindet oder verändert, was zu Datenverlust führen könnte.
+*   **NEU: Verbesserte Lokalisierung:**
+    *   Alle Dialoge und Fehlermeldungen sind nun vollständig ins Deutsche übersetzt (inkl. Glossar-Update-Fenster).
+    *   "Unsorted" wird nun korrekt als "Unsortiert" angezeigt.
+*   **NEU: Konsistente Namens-Prompts:**
+    *   Die KI wird nun explizit angewiesen, Namen immer zweisprachig (`Deutsch / Englisch`) zu formatieren, wenn ein Glossar verwendet wird.
 
 ## 🚀 Features (v1.1.2 Update)
 

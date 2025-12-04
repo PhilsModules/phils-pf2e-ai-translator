@@ -8,9 +8,10 @@ export class TermReplacer {
      * Respects HTML tags (does not replace inside tags).
      * @param {string} text - The input text (potentially HTML).
      * @param {Object} dictionary - Map of terms to replace (English -> German).
+     * @param {boolean} [appendOriginal=false] - If true, appends the original term: "Translation %%Original%%".
      * @returns {{text: string, replaced: Array<{original: string, translation: string}>}} The text with terms replaced and list of replacements.
      */
-    static replaceTerms(text, dictionary) {
+    static replaceTerms(text, dictionary, appendOriginal = false) {
         if (!text || !dictionary) return { text: text, replaced: [] };
 
         // Check if we can reuse the cached regex and lookup
@@ -49,6 +50,9 @@ export class TermReplacer {
                 const entry = this._lookupCache[match.toLowerCase()];
                 if (entry) {
                     replacedTerms.set(entry.original, entry.translation);
+                    if (appendOriginal) {
+                        return `${entry.translation} %%${entry.original}%%`;
+                    }
                     return entry.translation;
                 }
                 return match;
