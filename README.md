@@ -1,5 +1,5 @@
 ![Foundry v12](https://img.shields.io/badge/foundry-v12-green)
-![Version](https://img.shields.io/badge/version-1.1.3-blue)
+![Version](https://img.shields.io/badge/version-1.1.4-blue)
 
 # Phil's PF2e AI Translator
 
@@ -8,6 +8,15 @@
 Dieses Modul hilft dir, **große Abenteuer-Module** oder lange Texte in Foundry VTT schnell und konsistent zu übersetzen. Es ist speziell für **PF2e** optimiert, funktioniert aber auch systemunabhängig.
 
 ---
+
+## 🚀 Features (v1.1.4 Update)
+
+*   **NEU: Optimierte Prompt-Struktur:**
+    *   Die KI-Prompts wurden komplett überarbeitet und in eine klare Struktur (`Role / Input / Security / Logic / Output`) gegliedert. Das sorgt für deutlich stabilere und konsistentere Ergebnisse bei allen KI-Modellen.
+*   **NEU: Verbesserte Glossar-Logik:**
+    *   Die KI gibt nun kein leeres JSON-Objekt mehr zurück, wenn keine neuen Begriffe gefunden wurden, sondern eine kurze Textnachricht. Das verhindert Verwirrung und unnötige "leere" Updates.
+*   **NEU: Intelligente Begriffs-Korrektur:**
+    *   Die Regel für vorübersetzte Begriffe (`%%Original%%`) wurde verfeinert: Die KI darf diese nun anpassen, wenn es **zwingend** für die Grammatik oder Logik des Satzes notwendig ist. Das verhindert "hölzerne" Übersetzungen.
 
 ## 🚀 Features (v1.1.3 Update)
 
