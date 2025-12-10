@@ -21,6 +21,12 @@ Dieses Modul hilft dir, **große Abenteuer-Module** oder lange Texte in Foundry 
 
 ---
 > [!NOTE]
+>
+>The concept and workflow of this module have been vetted and approved by Jan Wagner (Primetide), Head of Digital at Ulisses Spiele.
+>
+>It has been confirmed that this technical approach (mapping existing glossary terms for private use) complies with community guidelines and respects the intellectual property of Ulisses Spiele and Paizo.
+>
+>
 >## Credits & Licenses
 >
 >### Pathfinder German Translation Data
@@ -158,5 +164,6 @@ This module is licensed under the [GPL-3.0 License](LICENSE).
     </a>
     <p>Made with ❤️ for the Foundry VTT Community</p>
 </div>
+
 
 
