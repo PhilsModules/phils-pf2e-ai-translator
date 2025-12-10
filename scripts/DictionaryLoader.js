@@ -78,7 +78,8 @@ export class DictionaryLoader {
             }
 
             // 2. Load Compendium Translations
-            const browseResult = await FilePicker.browse("user", packDir);
+            const FilePickerClass = foundry.applications?.apps?.FilePicker || FilePicker;
+            const browseResult = await FilePickerClass.browse("user", packDir);
             const files = browseResult.files.filter(f => f.endsWith(".json"));
 
             const allowedPatterns = [

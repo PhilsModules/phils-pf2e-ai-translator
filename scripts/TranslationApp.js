@@ -324,7 +324,7 @@ async function prepareGrammarCheckPrompt(doc, userPrompt, systemName, sendFull, 
 
     // 2. Mark German Terms with [[#ID:Term]]
     // We assume input is already translated (German) or original (if used for that), but logic is to protect glossary terms.
-    const cleanWithMarkers = await injectGlossaryMarkers(cleanData);
+    const { processedData: cleanWithMarkers } = await injectGlossaryMarkers(cleanData);
 
     const jsonString = JSON.stringify(cleanWithMarkers, null, 2);
 
@@ -464,6 +464,11 @@ function checkNextBatch(doc, processingMode = 'translate') {
 
 async function showConflictDialog(doc, jsonText, conflicts, processingMode = 'translate') {
     return new Promise(resolve => {
+        function escapeHtml(text) {
+            if (!text) return "";
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
+        }
+
         let itemsHtml = "<ul style='padding-left:0; list-style:none;'>";
         conflicts.forEach(c => {
             itemsHtml += `
@@ -473,8 +478,8 @@ async function showConflictDialog(doc, jsonText, conflicts, processingMode = 'tr
             </div>
             
             <div style="margin-bottom:8px;">
-                ${c.originalContext ? `<div style="font-family:inherit; font-size:0.9em; line-height:1.4; color:#333; background:#fff; padding:6px; border:1px solid #ccc; border-radius:3px; margin-bottom:5px;"><b>${loc('LabelOriginalContext') || "Original:"}</b><br><i>"${c.originalContext}"</i></div>` : ""}
-                ${c.newContext ? `<div style="font-family:inherit; font-size:0.9em; line-height:1.4; color:#333; background:#fff; padding:6px; border:1px solid #ccc; border-radius:3px; margin-bottom:5px; border-left: 4px solid #d00;"><b>${loc('LabelNewContext') || "New (Est.):"}</b><br><i>"${c.newContext}"</i></div>` : ""}
+                ${c.originalContext ? `<div style="font-family:inherit; font-size:0.9em; line-height:1.4; color:#333; background:#fff; padding:6px; border:1px solid #ccc; border-radius:3px; margin-bottom:5px;"><b>${loc('LabelOriginalContext') || "Original:"}</b><br><i>"${escapeHtml(c.originalContext)}"</i></div>` : ""}
+                ${c.newContext ? `<div style="font-family:inherit; font-size:0.9em; line-height:1.4; color:#333; background:#fff; padding:6px; border:1px solid #ccc; border-radius:3px; margin-bottom:5px; border-left: 4px solid #d00;"><b>${loc('LabelNewContext') || "New (Est.):"}</b><br><i>"${escapeHtml(c.newContext)}"</i></div>` : ""}
             </div>
 
             <div style="display:flex; justify-content:flex-end; gap:15px; align-items:center; background:#ddd; padding:5px; border-radius:3px;">
@@ -495,7 +500,7 @@ async function showConflictDialog(doc, jsonText, conflicts, processingMode = 'tr
         const content = `
     <div style="padding:10px;">
         <p>${loc('DescConflict') || "The AI changed protected glossary terms. Please decide:"}</p>
-        <div style="border:1px solid #999; padding:5px; background:#fff;">
+        <div style="border:1px solid #999; padding:5px; background:#fff; max-height: 60vh; overflow-y: auto;">
             ${itemsHtml}
         </div>
         <p style="margin-top:10px; font-style:italic; font-size:0.9em;">
@@ -523,6 +528,10 @@ async function showConflictDialog(doc, jsonText, conflicts, processingMode = 'tr
             },
             default: "apply",
             close: () => resolve({ action: 'cancel' })
+        }, {
+            width: 600,
+            resizable: true,
+            id: "phils-translator-conflict"
         });
         d.render(true);
     });

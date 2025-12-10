@@ -32,10 +32,7 @@ export function resolvePrompt(key, data) {
 
 
 // --- GLOBAL GLOSSARY STATE ---
-export const GLOSSARY_MAP = new Map();
-function clearGlossaryMap() {
-    GLOSSARY_MAP.clear();
-}
+// DEPRECATED: GLOSSARY_MAP removed in favor of local state injection (v5.0)
 // -----------------------------
 
 // Helper to load dictionary (Shared)
@@ -63,14 +60,14 @@ async function loadDictionary() {
 // Helper to inject markers into German text (Reverse Lookup)
 // dictionary is English -> German
 export async function injectGlossaryMarkers(docData) {
-    // reset map for new run (ALWAYS do this first to avoid stale state)
-    clearGlossaryMap();
+    // Local Map for this specific injection run (Thread-Safe)
+    const glossaryMap = new Map();
 
     // 1. Load Dictionary
     const dictionary = await loadDictionary();
     if (!dictionary || Object.keys(dictionary).length === 0) {
-        // No glossary? No problem. Just don't protect anything.
-        return docData;
+        // No glossary? Return unmodified data and empty map.
+        return { processedData: docData, glossaryMap: glossaryMap };
     }
 
     // 2. Prepare Terms for Regex (sort by length desc)
@@ -78,7 +75,7 @@ export async function injectGlossaryMarkers(docData) {
     const uniqueTerms = [...new Set(allGermanTerms)].filter(t => t && t.length > 2);
     const terms = uniqueTerms.sort((a, b) => b.length - a.length);
 
-    if (terms.length === 0) return docData;
+    if (terms.length === 0) return { processedData: docData, glossaryMap: glossaryMap };
 
     let termCounter = 0;
 
@@ -96,7 +93,7 @@ export async function injectGlossaryMarkers(docData) {
                 termCounter++;
                 const id = `#${termCounter}`;
                 // Store Term AND Scope ID (v4.4 Scope Awareness)
-                GLOSSARY_MAP.set(id, { term: match, scopeId: scopeId });
+                glossaryMap.set(id, { term: match, scopeId: scopeId });
                 return `[[${id}:${match}]]`;
             });
         }).join("");
@@ -130,7 +127,7 @@ export async function injectGlossaryMarkers(docData) {
     let processedData = foundry.utils.deepClone(docData);
     processedData = injectInObject(processedData);
 
-    return processedData;
+    return { processedData: processedData, glossaryMap: glossaryMap };
 }
 
 // Helper to inject official translations
@@ -350,7 +347,8 @@ export async function processUpdate(doc, rawText, processingMode = 'translate') 
                             rawSnippet = rawSnippet.replace(searchPattern, `<b style="color:#d00; text-decoration:underline;">${term}</b>`);
 
                             // 2. Clean ALL other markers: [[#ID:Content]] -> Content
-                            rawSnippet = rawSnippet.replace(/\[\[#.*?:(.*?)\]\]/g, "$1");
+                            // v4.5.2 FIX: Use Robust Regex for cleaning to match scanConflicts compatibility
+                            rawSnippet = rawSnippet.replace(/\[\[\s*#?(\d+)\s*:\s*(.*?)\s*\]\]/g, "$2");
 
                             context = rawSnippet;
                         }
@@ -421,16 +419,56 @@ export async function processUpdate(doc, rawText, processingMode = 'translate') 
                         }
                     }
 
-                    let cleanGap = rawGap.replace(/\\"/g, '"')
-                        .replace(/^[^\wäöüÄÖÜß]+/, "")
-                        .replace(/[^\wäöüÄÖÜß]+$/, "");
+                    // v4.5.5 FIX: Hybrid Cleaning Strategy
+                    // Problem: v4.5.4 failed for gaps INSIDE a long string (no quotes found).
+                    // Solution: Determine if gap contains JSON structure or is pure text.
 
-                    if (cleanGap.length < 3) return "[GELÖSCHT]";
+                    let cleanGap = "";
+
+                    // Check for JSON structural indicators: "Key": Value or Array/Object boundaries
+                    if (rawGap.match(/"[\w\s]+"\s*:/) || rawGap.includes("},{") || rawGap.includes("],[")) {
+                        // COMPLEX MODE: Gap spans multiple JSON fields. Extract Strings.
+                        const stringMatches = [...rawGap.matchAll(/"((?:[^"\\]|\\.)*)"/g)];
+                        let contentFragments = [];
+
+                        for (const m of stringMatches) {
+                            const val = m[1];
+                            // Filter technical keys
+                            if (val.length > 25 || (val.length > 3 && val.includes(" "))) {
+                                contentFragments.push(val.replace(/\\"/g, '"'));
+                            }
+                        }
+                        if (contentFragments.length > 0) cleanGap = contentFragments.join(" [...] ");
+
+                    } else {
+                        // SIMPLE MODE: Gap is likely inside a single string.
+                        // Just strip isolated JSON artifacts like closing/opening quotes if they appear at edges.
+                        cleanGap = rawGap;
+
+                        // Remove specific artifacts: " at start/end, or \", or null/true/false if isolated
+                        cleanGap = cleanGap.replace(/\\"/g, '"')
+                            .replace(/^"\s*,\s*"/, "") // ", "
+                            .replace(/^\s*"\s*:/, "")   // ":
+                            .replace(/,\s*"$/, "")      // ,"
+                            .trim();
+
+                        // Sanity check: Ensure it's not just "41" or "null"
+                        if (cleanGap.match(/^(null|true|false|\d+)$/)) cleanGap = "";
+                    }
+
+                    // Final Cleanup of non-word edge chars
+                    cleanGap = cleanGap.replace(/^[^\wäöüÄÖÜß("]+/, "")
+                        .replace(/[^\wäöüÄÖÜß).!?"']+$/, "");
+
+
+                    if (cleanGap.length < 2) return "[GELÖSCHT]";
 
                     if (cleanGap.length > 250) cleanGap = cleanGap.substring(0, 250) + "...";
 
-                    console.log(`[Phils Translator v4.3] Gap Found between ${startMarker} and ${endMarker}`);
+                    console.log(`[Phils Translator v4.5.5] Gap Found between ${startMarker} and ${endMarker}`);
                     return `[... ${cleanGap} ...] (Zwischen ${startMarker} & ${endMarker})`;
+
+
 
                 } catch (e) {
                     console.error("Context Recovery Error:", e);
@@ -440,8 +478,9 @@ export async function processUpdate(doc, rawText, processingMode = 'translate') 
 
 
             // To get ORIGINAL Context, we need the original text with markers.
-            // This is where GLOSSARY_MAP is populated.
-            const referenceData = await injectGlossaryMarkers(getCleanData(doc, true));
+            // This is where glossaryMap is supposed to be populated.
+            // v5.0: Now returns object with map
+            const { processedData: referenceData, glossaryMap } = await injectGlossaryMarkers(getCleanData(doc, true));
 
             // IDENTIFY UPDATED SCOPES (v4.4)
             // We scan jsonData to see which IDs (Pages/Items) are present.
@@ -470,7 +509,7 @@ export async function processUpdate(doc, rawText, processingMode = 'translate') 
                     for (const match of matches) {
                         const id = `#${match[1]}`; // Reconstruct ID (e.g. #123)
                         const returnedTerm = match[2]; // Content
-                        const entry = GLOSSARY_MAP.get(id); // Returns Object {term, scopeId}
+                        const entry = glossaryMap.get(id); // Returns Object {term, scopeId}
 
                         if (entry) {
                             const originalTerm = entry.term;
@@ -498,11 +537,11 @@ export async function processUpdate(doc, rawText, processingMode = 'translate') 
             scanConflicts(jsonData);
 
             // Check for MISSING Terms
-            const allIds = Array.from(GLOSSARY_MAP.keys());
+            const allIds = Array.from(glossaryMap.keys());
             const jsonString = JSON.stringify(jsonData);
 
             for (const id of allIds) {
-                const entry = GLOSSARY_MAP.get(id);
+                const entry = glossaryMap.get(id);
                 // 1. SCOPE CHECK: Is this term's scope even being updated?
                 // If scopeId is undefined (legacy), we default to checked.
                 if (entry && entry.scopeId && !updatedScopes.has(entry.scopeId)) {

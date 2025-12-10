@@ -1,4 +1,9 @@
-## v1.2.3 - Stabilität & "Smart Check" Update
+## v1.2.5 - Stability & External Access Fixes
+*   **Fix: Thread-Safe Glossary Check:** Die interne Logik für Glossar-Checks wurde komplett überarbeitet (lokaler State statt globaler Map). Dies behebt die fehlerhafte "Konflikt"-Erkennung, insbesondere bei langsameren Verbindungen oder externem Zugriff.
+*   **Prompt-Hardening (Anti-Halluzination):** Die KI-Prompts (DE/EN) wurden gehärtet. Sie enthalten nun explizite Anweisungen, IDs niemals neu zu nummerieren. Dies verhindert, dass die KI "[[#1:...]]" erfindet, wo vorher "[[#12:...]]" war.
+*   **UI-Layout Fix:** Der Konflikt-Dialog hat nun eine Scrollbar und bricht nicht mehr aus dem Bildschirm aus, wenn viele Fehler gefunden werden.
+
+## v1.2.4 - Stabilität & "Smart Check" Update
 *   **Intelligente Scope-Erkennung:** Das Modul prüft nun intelligent, *welche* Seiten/Items in der KI-Antwort tatsächlich aktualisiert wurden. Dies eliminiert falsche Warnungen über "Fehlende Begriffe", wenn du nur einen Teil eines Dokuments übersetzt (Partial Prompting).
 *   **Robuste Kontext-Wiederherstellung (v4.5):** 
     *   Komplett neu geschriebene Logik zum Finden von "Lücken" (Deterministische Nachbar-Interpolation).
