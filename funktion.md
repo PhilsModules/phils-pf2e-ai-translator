@@ -19,7 +19,7 @@ Der Workflow ist ein okkultes Ritual in 6 Schritten:
     * *"Übersetzen":* Wenn du Text hast, der noch englischer ist als Fish & Chips.
     * *"Grammatik-Check":* Wenn der Text schon deutsch ist, aber aussieht, als hätte ihn ein besoffener Ork mit Fäustlingen getippt.
 3.  **Die Beschwörungsformel:** Klick auf **"Übersetzung starten"**. Das Modul generiert jetzt einen Prompt, der so präzise formuliert ist, dass selbst ein Dschinn ihn nicht missverstehen könnte. Er landet in deiner Zwischenablage.
-4.  **Der Gang nach Canossa:** Du gehst zu ChatGPT, Claude, DeepSeek oder dem KI-Orakel deiner Wahl. `Strg+V` (Einfügen). Enter.
+4.  **Der Gang nach Canossa:** Du gehst zu ChatGPT, Claude, DeepSeek oder deiner Oma (falls sie gut JSON spricht)... `Strg+V` (Einfügen). Enter.
 5.  **Das Ernten:** Die KI kotzt (hoffentlich) perfekten, formatierten Text aus (JSON). Du kopierst diesen Kauderwelsch.
 6.  **Die Erlösung:** Zurück zu Foundry. Einfügen. Klick auf **"Update"**.
     * *Ergebnis:* BÄM! Dein Journal glänzt wie eine polierte Plattenrüstung.
@@ -107,3 +107,4 @@ Weil wir wissen, dass Software von Menschen gemacht wird (und Menschen Fehler ma
 4.  **Bier trinken:** Das Modul prüft, ob die KI Mist gebaut hat, macht ein Backup und speichert dann erst.
 
 Jetzt geh und erschaffe Welten (oder übersetze sie dir privat, wir haben ja alle den Disclaimer gelesen). 🤖✨
+
