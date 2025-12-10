@@ -63,7 +63,7 @@ Phil's Pf2e Ai Translator verbindet deine Foundry VTT Welt mit der Power moderne
 3.  Klicke auf **Install Module**.
 4.  Füge die folgende **Manifest URL** unten ein:
     ```text
-    [https://github.com/PhilsModules/phils-pf2e-ai-translator/releases/latest/download/module.json](https://github.com/PhilsModules/phils-pf2e-ai-translator/releases/latest/download/module.json)
+    https://github.com/PhilsModules/phils-pf2e-ai-translator/releases/latest/download/module.json
     ```
 5.  Klicke auf **Install**.
 
@@ -151,3 +151,4 @@ Portions of this module utilize data from the [Pathfinder German Translation mod
     <br><br>
     <p><i>Made with ❤️ for the Foundry VTT Community</i></p>
 </div>
+
