@@ -222,7 +222,7 @@ export function getGlossaryContent() {
     return cleanContent.substring(0, 5000);
 }
 
-export async function processUpdate(doc, rawText) {
+export async function processUpdate(doc, rawText, processingMode = 'translate') {
     const jsonMatches = [...rawText.matchAll(/```json\s*([\s\S]*?)\s*```/gi)];
     let translationJson = null;
     let newGlossaryItems = null;
@@ -419,7 +419,20 @@ export async function processUpdate(doc, rawText) {
                 jsonData.pages = jsonData.pages.map(newPage => {
                     if (newPage._id) {
                         newPage.flags = newPage.flags || {};
-                        newPage.flags[MODULE_ID] = { aiProcessed: true };
+
+                        if (processingMode === 'grammar') {
+                            newPage.flags[MODULE_ID] = {
+                                aiGrammarChecked: true,
+                                // Preserve existing translation status if present
+                                aiProcessed: doc.pages.get(newPage._id)?.getFlag(MODULE_ID, 'aiProcessed') || false
+                            };
+                        } else {
+                            // Translate mode (default)
+                            newPage.flags[MODULE_ID] = {
+                                aiProcessed: true,
+                                aiGrammarChecked: false // Clear grammar check as it is new text
+                            };
+                        }
                     }
                     return newPage;
                 });

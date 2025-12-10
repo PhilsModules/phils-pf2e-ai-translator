@@ -1,5 +1,11 @@
 # Changelog
 
+## v1.2.1 (December 10, 2025)
+*   **Visual Tracking for Grammar Checks**: Added a new icon (`fa-spell-check`) to the page list. Now you can distinguish between pages that are just "Translated" (Green Check) and pages that have been "Grammar Checked" (Blue Spell Check).
+*   **Status Tracking**: The module now distinctively tracks `aiProcessed` (Translation) and `aiGrammarChecked` (Grammar Check) states.
+*   **Legal Updates**: Added prominent legal notices regarding private use of copyrighted translations.
+*   **Metadata Fixes**: Corrected `module.json` license and readme fields.
+
 ## v1.2.0 Update
 
 *   **NEU: Grammatik-Check Modus:**
