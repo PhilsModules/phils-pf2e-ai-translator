@@ -1,10 +1,10 @@
+## v1.2.8 - Save-Logic & Conflict Fixes
+*   **Fix: Konflikt-Dialog Async Saving:** Der "Konflikt-Dialog" wartet nun korrekt auf deine Entscheidung, bevor er weitermacht. Zuvor wurde die Eingabe ("Original wiederherstellen" vs. "Neu behalten") unter bestimmten Umständen ignoriert und der Text ungeprüft gespeichert.
+*   **Verbesserung: Konflikt-Modus:** Die strikte Konflikt-Erkennung (die nach veränderten/fehlenden `[[#ID...]]` Markern sucht) ist nun **nur noch im Grammatik-Modus** aktiv. Bei normalen Übersetzungen, wo sich Text und Satzbau natürlich ändern, führte dies zu unnötigen Fehlalarmen.
+
 ## v1.2.7 - Grammatik-Scope Logik Fix
 *   **Fix:** Die "Grammatik-Prüfung" respektiert nun korrekt den ausgewählten Seitenbereich. Sie validiert nicht mehr das gesamte Journal gegen die Teil-Antwort der KI, was falsche Warnungen über "Fehlende Begriffe" auf nicht ausgewählten Seiten eliminiert.
 *   **Fix:** `selectedPageIds` werden nun korrekt von der Prompt-Erstellung bis zur Validierung durchgereicht.
-
-## v1.2.6 - Hotfix Layout
-*   **Fix:** Behoben eines kritischen Layout-Fehlers ("Fenster in Fenster"), bei dem ein schließendes `</div>` Tag fehlte.
-*   **Fix:** HTML-Sanitizer hinzugefügt, um Layout-Bruch durch Sonderzeichen zu verhindern.
 
 ## v1.2.6 - Hotfix Layout
 *   **Fix:** Behoben eines kritischen Layout-Fehlers ("Fenster in Fenster"), bei dem ein schließendes `</div>` Tag fehlte.
@@ -95,4 +95,3 @@
     *   Wählt automatisch immer 10 Seiten auf einmal aus, um Context-Limits der KI nicht zu sprengen.
 *   **Multi-Provider Support:**
     *   Bereitet Prompts vor für: **ChatGPT, Claude, Gemini, Copilot, Perplexity**.
-

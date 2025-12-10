@@ -1,4 +1,4 @@
-import { loc, resolvePrompt, getCleanData, getContextDescription, getGlossaryContent, processUpdate, addToGlossary, MODULE_ID, injectOfficialTranslations, injectGlossaryMarkers } from './TranslationLogic.js';
+import { loc, resolvePrompt, getCleanData, getContextDescription, getGlossaryContent, processUpdate, addToGlossary, MODULE_ID, injectOfficialTranslations, injectGlossaryMarkers, applyResolvedUpdate } from './TranslationLogic.js';
 
 const { FormApplication, Dialog, JournalEntry, JournalEntryPage } = /** @type {any} */ (globalThis);
 
@@ -401,7 +401,16 @@ export function showResultDialog(doc, initialContent = "", errorMsg = null, expe
                     if (typeof result === 'string') {
                         showResultDialog(doc, text, result, expectGlossaryCreation, expectGlossaryUpdate, isGlossaryMode, processingMode, selectedPages);
                     } else if (result && result.status === 'conflict') {
-                        showConflictDialog(doc, text, result.conflicts, processingMode);
+                        const dialogResult = await showConflictDialog(doc, text, result.conflicts, processingMode);
+                        if (dialogResult && dialogResult.action === 'apply') {
+                            const resolutionResult = await applyResolvedUpdate(doc, result.jsonData, dialogResult.resolutions, processingMode, selectedPages);
+
+                            // Handle Success after resolution
+                            // Note: Resolution pass does not generate new glossary items usually
+                            if (resolutionResult === true || resolutionResult.success) {
+                                checkNextBatch(doc, processingMode);
+                            }
+                        }
                     } else if (result === true || result.success) {
                         // Success
 

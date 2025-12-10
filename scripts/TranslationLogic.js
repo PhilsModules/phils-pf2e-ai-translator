@@ -312,405 +312,444 @@ export async function processUpdate(doc, rawText, processingMode = 'translate', 
             delete jsonData._id;
 
             // --- CLEANUP START ---
+
             // 1. Check for Glossary Conflicts (Grammar Check Protection) & MISSING Terms
+            // ONLY RUN IN GRAMMAR MODE (Translation Mode naturally changes text/languages and ID matching is unreliable/unintended)
+            if (processingMode === 'grammar') {
 
-            // Helper: Find index of an ID in the JSON string using robust Regex
-            // Matches: [[#123:, [[ # 123 :, [[ 123 :, etc.
-            const findIdIndex = (jsonStr, id) => {
-                // id is "#123". Remove # for the raw number.
-                const rawNum = id.replace("#", "");
-                // Regex: [[ + whitespace + optional # + whitespace + number + whitespace + :
-                const pattern = `\\[\\[\\s*#?\\s*${rawNum}\\s*:`;
-                const regex = new RegExp(pattern);
-                const match = jsonStr.match(regex);
-                return match ? { index: match.index, length: match[0].length } : null;
-            };
+                // Helper: Find index of an ID in the JSON string using robust Regex
+                // Matches: [[#123:, [[ # 123 :, [[ 123 :, etc.
+                const findIdIndex = (jsonStr, id) => {
+                    // id is "#123". Remove # for the raw number.
+                    const rawNum = id.replace("#", "");
+                    // Regex: [[ + whitespace + optional # + whitespace + number + whitespace + :
+                    const pattern = `\\[\\[\\s*#?\\s*${rawNum}\\s*:`;
+                    const regex = new RegExp(pattern);
+                    const match = jsonStr.match(regex);
+                    return match ? { index: match.index, length: match[0].length } : null;
+                };
 
-            // Helpers for Context Extraction and Cleaning
-            const extractCleanContext = (obj, searchPattern, targetId) => {
-                let context = null;
-                const findContext = (o) => {
-                    if (context) return;
-                    if (typeof o === 'string') {
-                        if (o.includes(searchPattern)) {
-                            const index = o.indexOf(searchPattern);
-                            // Grab a generous chunk
-                            const start = Math.max(0, index - 80);
-                            const end = Math.min(o.length, index + searchPattern.length + 80);
-                            let rawSnippet = "..." + o.substring(start, end).trim() + "...";
+                // Helpers for Context Extraction and Cleaning
+                const extractCleanContext = (obj, searchPattern, targetId) => {
+                    let context = null;
+                    const findContext = (o) => {
+                        if (context) return;
+                        if (typeof o === 'string') {
+                            if (o.includes(searchPattern)) {
+                                const index = o.indexOf(searchPattern);
+                                // Grab a generous chunk
+                                const start = Math.max(0, index - 80);
+                                const end = Math.min(o.length, index + searchPattern.length + 80);
+                                let rawSnippet = "..." + o.substring(start, end).trim() + "...";
 
-                            // Extract Term from searchPattern: [[#ID:Term]]
-                            const termMatch = searchPattern.match(/\[\[#.*?:(.*?)\]\]/);
-                            const term = termMatch ? termMatch[1] : "???";
+                                // Extract Term from searchPattern: [[#ID:Term]]
+                                const termMatch = searchPattern.match(/\[\[#.*?:(.*?)\]\]/);
+                                const term = termMatch ? termMatch[1] : "???";
 
-                            // Replace specific target strict
-                            rawSnippet = rawSnippet.replace(searchPattern, `<b style="color:#d00; text-decoration:underline;">${term}</b>`);
+                                // Replace specific target strict
+                                rawSnippet = rawSnippet.replace(searchPattern, `<b style="color:#d00; text-decoration:underline;">${term}</b>`);
 
-                            // 2. Clean ALL other markers: [[#ID:Content]] -> Content
-                            // v4.5.2 FIX: Use Robust Regex for cleaning to match scanConflicts compatibility
-                            rawSnippet = rawSnippet.replace(/\[\[\s*#?(\d+)\s*:\s*(.*?)\s*\]\]/g, "$2");
+                                // 2. Clean ALL other markers: [[#ID:Content]] -> Content
+                                // v4.5.2 FIX: Use Robust Regex for cleaning to match scanConflicts compatibility
+                                rawSnippet = rawSnippet.replace(/\[\[\s*#?(\d+)\s*:\s*(.*?)\s*\]\]/g, "$2");
 
-                            context = rawSnippet;
+                                context = rawSnippet;
+                            }
+                        } else if (Array.isArray(o)) {
+                            o.forEach(i => findContext(i));
+                        } else if (typeof o === 'object' && o !== null) {
+                            for (const k in o) findContext(o[k]);
                         }
-                    } else if (Array.isArray(o)) {
-                        o.forEach(i => findContext(i));
-                    } else if (typeof o === 'object' && o !== null) {
-                        for (const k in o) findContext(o[k]);
+                    };
+                    findContext(obj);
+                    return context;
+                };
+
+                // Helper: Recover context via Deterministic Neighbor Interpolation (v4.3 - Robust Regex)
+                const recoverContext = (targetId, jsonData, referenceData) => {
+                    try {
+                        const jsonString = JSON.stringify(jsonData);
+                        const refString = JSON.stringify(referenceData);
+
+                        const extractIdOrder = (str) => {
+                            const matches = [...str.matchAll(/\[\[#(.*?):/g)];
+                            return matches.map(m => `#${m[1]}`);
+                        };
+
+                        const refIds = extractIdOrder(refString);
+                        const targetIndex = refIds.indexOf(targetId);
+
+                        if (targetIndex === -1) return "(ID not found in Reference)";
+
+                        // 2. Find Nearest Preceding Anchor
+                        let startIndex = 0;
+                        let startMarker = "[Start]";
+
+                        for (let i = targetIndex - 1; i >= 0; i--) {
+                            const pid = refIds[i];
+                            const match = findIdIndex(jsonString, pid);
+                            if (match) {
+                                startIndex = match.index + match.length;
+                                startMarker = pid;
+                                break;
+                            }
+                        }
+
+                        // 3. Find Nearest Succeeding Anchor
+                        let endIndex = jsonString.length;
+                        let endMarker = "[End]";
+
+                        for (let i = targetIndex + 1; i < refIds.length; i++) {
+                            const nid = refIds[i];
+                            const match = findIdIndex(jsonString, nid);
+                            if (match) {
+                                endIndex = match.index;
+                                endMarker = nid;
+                                break;
+                            }
+                        }
+
+                        // 4. Extract Gap
+                        if (startIndex >= endIndex) return "(Gap collapsed)";
+
+                        let rawGap = jsonString.substring(startIndex, endIndex);
+
+                        // 5. Cleanup
+                        if (startMarker !== "[Start]") {
+                            const closingBracket = rawGap.indexOf("]]");
+                            if (closingBracket !== -1 && closingBracket < 100) {
+                                rawGap = rawGap.substring(closingBracket + 2);
+                            }
+                        }
+
+                        // v4.5.5 FIX: Hybrid Cleaning Strategy
+                        // Problem: v4.5.4 failed for gaps INSIDE a long string (no quotes found).
+                        // Solution: Determine if gap contains JSON structure or is pure text.
+
+                        let cleanGap = "";
+
+                        // Check for JSON structural indicators: "Key": Value or Array/Object boundaries
+                        if (rawGap.match(/"[\w\s]+"\s*:/) || rawGap.includes("},{") || rawGap.includes("],[")) {
+                            // COMPLEX MODE: Gap spans multiple JSON fields. Extract Strings.
+                            const stringMatches = [...rawGap.matchAll(/"((?:[^"\\]|\\.)*)"/g)];
+                            let contentFragments = [];
+
+                            for (const m of stringMatches) {
+                                const val = m[1];
+                                // Filter technical keys
+                                if (val.length > 25 || (val.length > 3 && val.includes(" "))) {
+                                    contentFragments.push(val.replace(/\\"/g, '"'));
+                                }
+                            }
+                            if (contentFragments.length > 0) cleanGap = contentFragments.join(" [...] ");
+
+                        } else {
+                            // SIMPLE MODE: Gap is likely inside a single string.
+                            // Just strip isolated JSON artifacts like closing/opening quotes if they appear at edges.
+                            cleanGap = rawGap;
+
+                            // Remove specific artifacts: " at start/end, or \", or null/true/false if isolated
+                            cleanGap = cleanGap.replace(/\\"/g, '"')
+                                .replace(/^"\s*,\s*"/, "") // ", "
+                                .replace(/^\s*"\s*:/, "")   // ":
+                                .replace(/,\s*"$/, "")      // ,"
+                                .trim();
+
+                            // Sanity check: Ensure it's not just "41" or "null"
+                            if (cleanGap.match(/^(null|true|false|\d+)$/)) cleanGap = "";
+                        }
+
+                        // Final Cleanup of non-word edge chars
+                        cleanGap = cleanGap.replace(/^[^\wäöüÄÖÜß("]+/, "")
+                            .replace(/[^\wäöüÄÖÜß).!?"']+$/, "");
+
+
+                        if (cleanGap.length < 2) return "[GELÖSCHT]";
+
+                        if (cleanGap.length > 250) cleanGap = cleanGap.substring(0, 250) + "...";
+
+                        console.log(`[Phils Translator v4.5.5] Gap Found between ${startMarker} and ${endMarker}`);
+                        return `[... ${cleanGap} ...] (Zwischen ${startMarker} & ${endMarker})`;
+
+
+
+                    } catch (e) {
+                        console.error("Context Recovery Error:", e);
+                        return "(Recovery Error)";
                     }
                 };
-                findContext(obj);
-                return context;
-            };
 
-            // Helper: Recover context via Deterministic Neighbor Interpolation (v4.3 - Robust Regex)
-            const recoverContext = (targetId, jsonData, referenceData) => {
-                try {
-                    const jsonString = JSON.stringify(jsonData);
-                    const refString = JSON.stringify(referenceData);
 
-                    const extractIdOrder = (str) => {
-                        const matches = [...str.matchAll(/\[\[#(.*?):/g)];
-                        return matches.map(m => `#${m[1]}`);
-                    };
+                // To get ORIGINAL Context, we need the original text with markers.
+                // This is where glossaryMap is supposed to be populated.
+                // v5.0: Now returns object with map
+                const { processedData: referenceData, glossaryMap } = await injectGlossaryMarkers(getCleanData(doc, true, selectedPageIds));
 
-                    const refIds = extractIdOrder(refString);
-                    const targetIndex = refIds.indexOf(targetId);
+                // IDENTIFY UPDATED SCOPES (v4.4)
+                // We scan jsonData to see which IDs (Pages/Items) are present.
+                // Any term belonging to a Scope ID NOT in this list will be ignored.
+                const updatedScopes = new Set();
+                updatedScopes.add("root"); // Always include root (document level fields)
 
-                    if (targetIndex === -1) return "(ID not found in Reference)";
-
-                    // 2. Find Nearest Preceding Anchor
-                    let startIndex = 0;
-                    let startMarker = "[Start]";
-
-                    for (let i = targetIndex - 1; i >= 0; i--) {
-                        const pid = refIds[i];
-                        const match = findIdIndex(jsonString, pid);
-                        if (match) {
-                            startIndex = match.index + match.length;
-                            startMarker = pid;
-                            break;
-                        }
+                const collectScopes = (obj) => {
+                    if (typeof obj === 'object' && obj !== null) {
+                        if (obj._id) updatedScopes.add(obj._id);
+                        if (Array.isArray(obj)) obj.forEach(collectScopes);
+                        else Object.values(obj).forEach(collectScopes);
                     }
+                };
+                collectScopes(jsonData);
+                console.log("Phils Translator | Updated Scopes identified:", updatedScopes);
 
-                    // 3. Find Nearest Succeeding Anchor
-                    let endIndex = jsonString.length;
-                    let endMarker = "[End]";
+                const conflicts = [];
 
-                    for (let i = targetIndex + 1; i < refIds.length; i++) {
-                        const nid = refIds[i];
-                        const match = findIdIndex(jsonString, nid);
-                        if (match) {
-                            endIndex = match.index;
-                            endMarker = nid;
-                            break;
-                        }
-                    }
+                // Check for MODIFIED Terms
+                const scanConflicts = (obj) => {
+                    if (typeof obj === 'string') {
+                        // v4.5 Fix: Robust Regex for Conflict Detection
+                        // Matches: [[ # 123 : Term ]] (tolerant to spaces)
+                        const matches = [...obj.matchAll(/\[\[\s*#?(\d+)\s*:\s*(.*?)\s*\]\]/g)];
+                        for (const match of matches) {
+                            const id = `#${match[1]}`; // Reconstruct ID (e.g. #123)
+                            const returnedTerm = match[2]; // Content
+                            const entry = glossaryMap.get(id); // Returns Object {term, scopeId}
 
-                    // 4. Extract Gap
-                    if (startIndex >= endIndex) return "(Gap collapsed)";
+                            if (entry) {
+                                const originalTerm = entry.term;
 
-                    let rawGap = jsonString.substring(startIndex, endIndex);
+                                if (originalTerm && returnedTerm !== originalTerm) {
+                                    const originalContext = extractCleanContext(referenceData, `[[${id}:${originalTerm}]]`, id);
+                                    const newContext = extractCleanContext(jsonData, `[[${id}:${returnedTerm}]]`, id);
 
-                    // 5. Cleanup
-                    if (startMarker !== "[Start]") {
-                        const closingBracket = rawGap.indexOf("]]");
-                        if (closingBracket !== -1 && closingBracket < 100) {
-                            rawGap = rawGap.substring(closingBracket + 2);
-                        }
-                    }
-
-                    // v4.5.5 FIX: Hybrid Cleaning Strategy
-                    // Problem: v4.5.4 failed for gaps INSIDE a long string (no quotes found).
-                    // Solution: Determine if gap contains JSON structure or is pure text.
-
-                    let cleanGap = "";
-
-                    // Check for JSON structural indicators: "Key": Value or Array/Object boundaries
-                    if (rawGap.match(/"[\w\s]+"\s*:/) || rawGap.includes("},{") || rawGap.includes("],[")) {
-                        // COMPLEX MODE: Gap spans multiple JSON fields. Extract Strings.
-                        const stringMatches = [...rawGap.matchAll(/"((?:[^"\\]|\\.)*)"/g)];
-                        let contentFragments = [];
-
-                        for (const m of stringMatches) {
-                            const val = m[1];
-                            // Filter technical keys
-                            if (val.length > 25 || (val.length > 3 && val.includes(" "))) {
-                                contentFragments.push(val.replace(/\\"/g, '"'));
+                                    conflicts.push({
+                                        id: id,
+                                        original: originalTerm,
+                                        current: returnedTerm,
+                                        originalContext: originalContext || "(Context not found)",
+                                        newContext: newContext || "(Context not found)"
+                                    });
+                                }
                             }
                         }
-                        if (contentFragments.length > 0) cleanGap = contentFragments.join(" [...] ");
+                    } else if (Array.isArray(obj)) {
+                        obj.forEach(item => scanConflicts(item));
+                    } else if (typeof obj === 'object' && obj !== null) {
+                        for (const key in obj) scanConflicts(obj[key]);
+                    }
+                };
+                scanConflicts(jsonData);
 
-                    } else {
-                        // SIMPLE MODE: Gap is likely inside a single string.
-                        // Just strip isolated JSON artifacts like closing/opening quotes if they appear at edges.
-                        cleanGap = rawGap;
+                // Check for MISSING Terms
+                const allIds = Array.from(glossaryMap.keys());
+                const jsonString = JSON.stringify(jsonData);
 
-                        // Remove specific artifacts: " at start/end, or \", or null/true/false if isolated
-                        cleanGap = cleanGap.replace(/\\"/g, '"')
-                            .replace(/^"\s*,\s*"/, "") // ", "
-                            .replace(/^\s*"\s*:/, "")   // ":
-                            .replace(/,\s*"$/, "")      // ,"
-                            .trim();
-
-                        // Sanity check: Ensure it's not just "41" or "null"
-                        if (cleanGap.match(/^(null|true|false|\d+)$/)) cleanGap = "";
+                for (const id of allIds) {
+                    const entry = glossaryMap.get(id);
+                    // 1. SCOPE CHECK: Is this term's scope even being updated?
+                    // If scopeId is undefined (legacy), we default to checked.
+                    if (entry && entry.scopeId && !updatedScopes.has(entry.scopeId)) {
+                        // This term belongs to a page/item NOT present in the update JSON.
+                        // Ignore it silently.
+                        continue;
                     }
 
-                    // Final Cleanup of non-word edge chars
-                    cleanGap = cleanGap.replace(/^[^\wäöüÄÖÜß("]+/, "")
-                        .replace(/[^\wäöüÄÖÜß).!?"']+$/, "");
+                    // 2. EXISTENCE CHECK (v4.3 Regex)
+                    const match = findIdIndex(jsonString, id);
 
+                    if (!match) {
+                        const originalTerm = entry ? entry.term : "Unknown";
+                        const originalContext = extractCleanContext(referenceData, `[[${id}:${originalTerm}]]`, id);
+                        const recoveredContext = recoverContext(id, jsonData, referenceData);
 
-                    if (cleanGap.length < 2) return "[GELÖSCHT]";
-
-                    if (cleanGap.length > 250) cleanGap = cleanGap.substring(0, 250) + "...";
-
-                    console.log(`[Phils Translator v4.5.5] Gap Found between ${startMarker} and ${endMarker}`);
-                    return `[... ${cleanGap} ...] (Zwischen ${startMarker} & ${endMarker})`;
-
-
-
-                } catch (e) {
-                    console.error("Context Recovery Error:", e);
-                    return "(Recovery Error)";
-                }
-            };
-
-
-            // To get ORIGINAL Context, we need the original text with markers.
-            // This is where glossaryMap is supposed to be populated.
-            // v5.0: Now returns object with map
-            const { processedData: referenceData, glossaryMap } = await injectGlossaryMarkers(getCleanData(doc, true, selectedPageIds));
-
-            // IDENTIFY UPDATED SCOPES (v4.4)
-            // We scan jsonData to see which IDs (Pages/Items) are present.
-            // Any term belonging to a Scope ID NOT in this list will be ignored.
-            const updatedScopes = new Set();
-            updatedScopes.add("root"); // Always include root (document level fields)
-
-            const collectScopes = (obj) => {
-                if (typeof obj === 'object' && obj !== null) {
-                    if (obj._id) updatedScopes.add(obj._id);
-                    if (Array.isArray(obj)) obj.forEach(collectScopes);
-                    else Object.values(obj).forEach(collectScopes);
-                }
-            };
-            collectScopes(jsonData);
-            console.log("Phils Translator | Updated Scopes identified:", updatedScopes);
-
-            const conflicts = [];
-
-            // Check for MODIFIED Terms
-            const scanConflicts = (obj) => {
-                if (typeof obj === 'string') {
-                    // v4.5 Fix: Robust Regex for Conflict Detection
-                    // Matches: [[ # 123 : Term ]] (tolerant to spaces)
-                    const matches = [...obj.matchAll(/\[\[\s*#?(\d+)\s*:\s*(.*?)\s*\]\]/g)];
-                    for (const match of matches) {
-                        const id = `#${match[1]}`; // Reconstruct ID (e.g. #123)
-                        const returnedTerm = match[2]; // Content
-                        const entry = glossaryMap.get(id); // Returns Object {term, scopeId}
-
-                        if (entry) {
-                            const originalTerm = entry.term;
-
-                            if (originalTerm && returnedTerm !== originalTerm) {
-                                const originalContext = extractCleanContext(referenceData, `[[${id}:${originalTerm}]]`, id);
-                                const newContext = extractCleanContext(jsonData, `[[${id}:${returnedTerm}]]`, id);
-
-                                conflicts.push({
-                                    id: id,
-                                    original: originalTerm,
-                                    current: returnedTerm,
-                                    originalContext: originalContext || "(Context not found)",
-                                    newContext: newContext || "(Context not found)"
-                                });
-                            }
-                        }
-                    }
-                } else if (Array.isArray(obj)) {
-                    obj.forEach(item => scanConflicts(item));
-                } else if (typeof obj === 'object' && obj !== null) {
-                    for (const key in obj) scanConflicts(obj[key]);
-                }
-            };
-            scanConflicts(jsonData);
-
-            // Check for MISSING Terms
-            const allIds = Array.from(glossaryMap.keys());
-            const jsonString = JSON.stringify(jsonData);
-
-            for (const id of allIds) {
-                const entry = glossaryMap.get(id);
-                // 1. SCOPE CHECK: Is this term's scope even being updated?
-                // If scopeId is undefined (legacy), we default to checked.
-                if (entry && entry.scopeId && !updatedScopes.has(entry.scopeId)) {
-                    // This term belongs to a page/item NOT present in the update JSON.
-                    // Ignore it silently.
-                    continue;
-                }
-
-                // 2. EXISTENCE CHECK (v4.3 Regex)
-                const match = findIdIndex(jsonString, id);
-
-                if (!match) {
-                    const originalTerm = entry ? entry.term : "Unknown";
-                    const originalContext = extractCleanContext(referenceData, `[[${id}:${originalTerm}]]`, id);
-                    const recoveredContext = recoverContext(id, jsonData, referenceData);
-
-                    conflicts.push({
-                        id: id,
-                        original: originalTerm,
-                        current: "[GELÖSCHT / FEHLT]",
-                        originalContext: originalContext || "(Context not found)",
-                        newContext: recoveredContext || "(Context lost - Term deleted)"
-                    });
-                }
-            }
-
-
-            if (conflicts.length > 0) {
-                // Return conflicts to UI instead of proceeding
-                return { success: false, status: 'conflict', conflicts: conflicts, jsonData: jsonData };
-            }
-
-            // 2. Remove [[...]] markers but KEEP content
-            const cleanGrammarMarkers = (obj) => {
-                if (typeof obj === 'string') {
-                    // Match [[#ID:Content]] -> Content
-                    return obj.replace(/\[\[#.*?:(.*?)\]\]/g, "$1");
-                    // Also match legacy [[Content]] -> Content (fallback)
-                    // return obj.replace(/\[\[(.*?)\]\]/g, "$1"); 
-                } else if (Array.isArray(obj)) {
-                    return obj.map(item => cleanGrammarMarkers(item));
-                } else if (typeof obj === 'object' && obj !== null) {
-                    for (const key in obj) {
-                        obj[key] = cleanGrammarMarkers(obj[key]);
-                    }
-                    return obj;
-                }
-                return obj;
-            };
-            cleanGrammarMarkers(jsonData);
-
-            // 3. Remove %%...%% completely (Legacy/Recall/Translation Original Terms)
-            // Recursively remove %%Original%% markers from all string values in the object
-            const cleanObjectStrings = (obj) => {
-                if (typeof obj === 'string') {
-                    return obj.replace(/\s?%%.*?%%/g, "");
-                } else if (Array.isArray(obj)) {
-                    return obj.map(item => cleanObjectStrings(item));
-                } else if (typeof obj === 'object' && obj !== null) {
-                    for (const key in obj) {
-                        obj[key] = cleanObjectStrings(obj[key]);
-                    }
-                    return obj;
-                }
-                return obj;
-            };
-
-            // Apply cleanup to the entire JSON data
-            cleanObjectStrings(jsonData);
-            // --- CLEANUP END ---
-
-            if (doc.documentName === "JournalEntry" && jsonData.pages && jsonData.name !== "AI Glossary") {
-                const backupName = `${doc.name} (Backup)`;
-                const existingBackup = game.journal.find(j => j.name === backupName);
-
-                if (!existingBackup) {
-                    try {
-                        await doc.clone({ name: backupName }, { save: true });
-                        ui.notifications.info(loc('BackupCreated', { name: doc.name }) || `Backup created: "${doc.name} (Backup)"`);
-                    } catch (err) {
-                        console.warn("Backup creation failed:", err);
+                        conflicts.push({
+                            id: id,
+                            original: originalTerm,
+                            current: "[GELÖSCHT / FEHLT]",
+                            originalContext: originalContext || "(Context not found)",
+                            newContext: recoveredContext || "(Context lost - Term deleted)"
+                        });
                     }
                 }
-            }
 
-            if ((doc.documentName === "Actor" || doc.documentName === "Item") && jsonData.items && Array.isArray(jsonData.items)) {
-                jsonData.items = jsonData.items.map(newItem => {
-                    if (!newItem._id && doc.items) { console.warn(`Phils Translator | Safety: Item without ID skipped.`); return null; }
-                    if (doc.items) {
-                        const original = doc.items.get(newItem._id);
-                        if (original && (newItem.system?.description?.value === "" || newItem.system?.description?.value === null)) {
-                            if (newItem.system && newItem.system.description) delete newItem.system.description;
-                        }
-                    }
-                    return newItem;
-                }).filter(i => i !== null);
-            }
 
-            if (doc.documentName === "JournalEntry" && jsonData.pages && Array.isArray(jsonData.pages)) {
-                jsonData.pages = jsonData.pages.map(newPage => {
-                    if (newPage._id) {
-                        newPage.flags = newPage.flags || {};
-
-                        if (processingMode === 'grammar') {
-                            newPage.flags[MODULE_ID] = {
-                                aiGrammarChecked: true,
-                                // Preserve existing translation status if present
-                                aiProcessed: doc.pages.get(newPage._id)?.getFlag(MODULE_ID, 'aiProcessed') || false
-                            };
-                        } else {
-                            // Translate mode (default)
-                            newPage.flags[MODULE_ID] = {
-                                aiProcessed: true,
-                                aiGrammarChecked: false // Clear grammar check as it is new text
-                            };
-                        }
-                    }
-                    return newPage;
-                });
-            }
-
-            if (jsonData.type && jsonData.type !== doc.type) ui.notifications.warn(loc('WarnTypeChange') || `Achtung: Type-Change!`);
-
-            // --- ID VERIFICATION START ---
-            let validationErrors = [];
-
-            // 0. Verify Root ID (if present)
-            if (jsonData._id && jsonData._id !== doc.id) {
-                validationErrors.push(`Root ID Mismatch: Expected '${doc.id}', found '${jsonData._id}'. (The AI tried to change the Document ID.)`);
-            }
-
-            // DEEP ID CHECK (Recursive)
-            const validIds = collectAllIds(doc.toObject());
-            // Also allow the ID of the document itself if not in toObject (though it usually is)
-            validIds.add(doc.id);
-
-            const deepValidationErrors = validateDeepIds(jsonData, validIds);
-            if (deepValidationErrors.length > 0) {
-                validationErrors.push(...deepValidationErrors);
-            }
-
-            // Inline Link Verification (@Type[id])
-            // We still run this because it checks for *missing* IDs in the text content, which deep check doesn't cover (deep check only validates existence of IDs *in the structure*).
-            if (doc.documentName === "JournalEntry" && jsonData.pages) {
-                for (const newPage of jsonData.pages) {
-                    const originalPage = doc.pages.get(newPage._id);
-                    if (originalPage && newPage.text?.content) {
-                        const result = validateIds(originalPage.text.content, newPage.text.content);
-                        if (!result.valid) {
-                            if (result.missing.length > 0) validationErrors.push(`Page '${originalPage.name}': Missing IDs in text: ${result.missing.join(", ")}`);
-                            if (result.hallucinated.length > 0) validationErrors.push(`Page '${originalPage.name}': Hallucinated IDs in text: ${result.hallucinated.join(", ")}`);
-                        }
-                    }
+                if (conflicts.length > 0) {
+                    // Return conflicts to UI instead of proceeding
+                    return { success: false, status: 'conflict', conflicts: conflicts, jsonData: jsonData };
                 }
             }
 
-            if (validationErrors.length > 0) {
-                const errorMsg = "ID Verification Failed:\n" + validationErrors.join("\n");
-                console.warn(errorMsg);
-                ui.notifications.error("Translation rejected due to ID errors. Check console for details.");
-                return errorMsg;
-            }
-            // --- ID VERIFICATION END ---
-
-            await doc.update(jsonData);
-            ui.notifications.success(loc('Success', { docName: doc.name }));
+            // 2. Delegate to applyResolvedUpdate for final cleanup and saving
+            // This allows us to re-use this logic when conflicts are resolved later.
+            return await applyResolvedUpdate(doc, jsonData, {}, processingMode, selectedPageIds);
         }
 
         return { success: true, newGlossaryItems: newGlossaryItems };
+
+    } catch (e) {
+        console.error(e);
+        return e.message;
+    }
+}
+
+
+export async function applyResolvedUpdate(doc, jsonData, resolutions = {}, processingMode = 'translate', selectedPageIds = null) {
+    try {
+        // 0. Apply Resolutions (Restorations)
+        if (resolutions && Object.keys(resolutions).length > 0) {
+            const applyRes = (obj) => {
+                if (typeof obj === 'string') {
+                    // Replace [[#ID:Content]] based on resolution
+                    return obj.replace(/\[\[\s*#?([0-9]+)\s*:\s*(.*?)\s*\]\]/g, (match, idStr, content) => {
+                        const id = `#${idStr}`;
+                        const resResponse = resolutions[id];
+                        if (resResponse && resResponse !== 'keep') {
+                            return resResponse; // Restore original term (no markers)
+                        }
+                        return match; // Keep marker for now, cleaned in next step
+                    });
+                } else if (Array.isArray(obj)) {
+                    return obj.map(item => applyRes(item));
+                } else if (typeof obj === 'object' && obj !== null) {
+                    for (const key in obj) {
+                        obj[key] = applyRes(obj[key]);
+                    }
+                    return obj;
+                }
+                return obj;
+            };
+            applyRes(jsonData);
+        }
+
+        // 2. Remove [[...]] markers but KEEP content
+        const cleanGrammarMarkers = (obj) => {
+            if (typeof obj === 'string') {
+                // Match [[#ID:Content]] -> Content
+                return obj.replace(/\[\[#.*?:(.*?)\]\]/g, "$1");
+                // Also match legacy [[Content]] -> Content
+                // return obj.replace(/\[\[(.*?)\]\]/g, "$1"); 
+            } else if (Array.isArray(obj)) {
+                return obj.map(item => cleanGrammarMarkers(item));
+            } else if (typeof obj === 'object' && obj !== null) {
+                for (const key in obj) {
+                    obj[key] = cleanGrammarMarkers(obj[key]);
+                }
+                return obj;
+            }
+            return obj;
+        };
+        cleanGrammarMarkers(jsonData);
+
+        // 3. Remove %%...%% completely (Legacy/Recall/Translation Original Terms)
+        const cleanObjectStrings = (obj) => {
+            if (typeof obj === 'string') {
+                return obj.replace(/\s?%%.*?%%/g, "");
+            } else if (Array.isArray(obj)) {
+                return obj.map(item => cleanObjectStrings(item));
+            } else if (typeof obj === 'object' && obj !== null) {
+                for (const key in obj) {
+                    obj[key] = cleanObjectStrings(obj[key]);
+                }
+                return obj;
+            }
+            return obj;
+        };
+        cleanObjectStrings(jsonData);
+        // --- CLEANUP END ---
+
+        if (doc.documentName === "JournalEntry" && jsonData.pages && jsonData.name !== "AI Glossary") {
+            const backupName = `${doc.name} (Backup)`;
+            const existingBackup = game.journal.find(j => j.name === backupName);
+
+            if (!existingBackup) {
+                try {
+                    await doc.clone({ name: backupName }, { save: true });
+                    ui.notifications.info(loc('BackupCreated', { name: doc.name }) || `Backup created: "${doc.name} (Backup)"`);
+                } catch (err) {
+                    console.warn("Backup creation failed:", err);
+                }
+            }
+        }
+
+        if ((doc.documentName === "Actor" || doc.documentName === "Item") && jsonData.items && Array.isArray(jsonData.items)) {
+            jsonData.items = jsonData.items.map(newItem => {
+                if (!newItem._id && doc.items) { console.warn(`Phils Translator | Safety: Item without ID skipped.`); return null; }
+                if (doc.items) {
+                    const original = doc.items.get(newItem._id);
+                    if (original && (newItem.system?.description?.value === "" || newItem.system?.description?.value === null)) {
+                        if (newItem.system && newItem.system.description) delete newItem.system.description;
+                    }
+                }
+                return newItem;
+            }).filter(i => i !== null);
+        }
+
+        if (doc.documentName === "JournalEntry" && jsonData.pages && Array.isArray(jsonData.pages)) {
+            jsonData.pages = jsonData.pages.map(newPage => {
+                if (newPage._id) {
+                    newPage.flags = newPage.flags || {};
+
+                    if (processingMode === 'grammar') {
+                        newPage.flags[MODULE_ID] = {
+                            aiGrammarChecked: true,
+                            aiProcessed: doc.pages.get(newPage._id)?.getFlag(MODULE_ID, 'aiProcessed') || false
+                        };
+                    } else {
+                        // Translate mode (default)
+                        newPage.flags[MODULE_ID] = {
+                            aiProcessed: true,
+                            aiGrammarChecked: false
+                        };
+                    }
+                }
+                return newPage;
+            });
+        }
+
+        if (jsonData.type && jsonData.type !== doc.type) ui.notifications.warn(loc('WarnTypeChange') || `Achtung: Type-Change!`);
+
+        // --- ID VERIFICATION START ---
+        let validationErrors = [];
+
+        // 0. Verify Root ID
+        if (jsonData._id && jsonData._id !== doc.id) {
+            validationErrors.push(`Root ID Mismatch: Expected '${doc.id}', found '${jsonData._id}'.`);
+        }
+
+        // DEEP ID CHECK
+        const validIds = collectAllIds(doc.toObject());
+        validIds.add(doc.id);
+
+        const deepValidationErrors = validateDeepIds(jsonData, validIds);
+        if (deepValidationErrors.length > 0) {
+            validationErrors.push(...deepValidationErrors);
+        }
+
+        // Inline Link Verification (@Type[id])
+        if (doc.documentName === "JournalEntry" && jsonData.pages) {
+            for (const newPage of jsonData.pages) {
+                const originalPage = doc.pages.get(newPage._id);
+                if (originalPage && newPage.text?.content) {
+                    const result = validateIds(originalPage.text.content, newPage.text.content);
+                    if (!result.valid) {
+                        if (result.missing.length > 0) validationErrors.push(`Page '${originalPage.name}': Missing IDs: ${result.missing.join(", ")}`);
+                        if (result.hallucinated.length > 0) validationErrors.push(`Page '${originalPage.name}': Hallucinated IDs: ${result.hallucinated.join(", ")}`);
+                    }
+                }
+            }
+        }
+
+        if (validationErrors.length > 0) {
+            const errorMsg = "ID Verification Failed:\n" + validationErrors.join("\n");
+            console.warn(errorMsg);
+            ui.notifications.error("Translation rejected due to ID errors. Check console for details.");
+            return errorMsg;
+        }
+        // --- ID VERIFICATION END ---
+
+        await doc.update(jsonData);
+        ui.notifications.success(loc('Success', { docName: doc.name }));
+
+        return { success: true, newGlossaryItems: null };
 
     } catch (e) {
         console.error(e);
