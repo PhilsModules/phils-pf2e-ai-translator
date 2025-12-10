@@ -68,14 +68,20 @@ Phil's Pf2e Ai Translator verbindet deine Foundry VTT Welt mit der Power moderne
 
 ## 📖 Bedienung
 
-1.  **Translator öffnen:** Gehe in das Journal-Verzeichnis und klicke auf den **"KI Übersetzungs-Assistent"** Button.
-2.  **Inhalt wählen:** Wähle das Journal und die Seiten aus, die du übersetzen möchtest.
-3.  **Prompt generieren:** Das Modul erstellt einen optimierten Befehl. Klicke auf **"Prompt kopieren"**.
-4.  **KI fragen:** Füge den Text bei Gemini/ChatGPT ein und kopiere die **gesamte Antwort**.
-5.  **Update:** Klicke in Foundry auf **"Einfügen"** und dann auf **"Journal aktualisieren"**.
+### Workflow A: Übersetzung (Grüner Haken)
+1.  **Seiten wählen**: Wähle die Seiten, die du übersetzen möchtest.
+2.  **Prompt generieren**: Klicke auf **"Übersetzung starten"**.
+3.  **KI-Verarbeitung**: Prompt bei ChatGPT/Claude einfügen -> Antwort kopieren (JSON).
+4.  **Update**: In Foundry einfügen -> **"Journal aktualisieren"**.
+5.  **Loop**: Das Modul prüft automatisch auf verbleibende Seiten. Falls vorhanden, öffnet sich das nächste Fenster **automatisch vorausgewählt** für die Übersetzung.
 
-4.  **KI fragen:** Füge den Text bei Gemini/ChatGPT ein und kopiere die **gesamte Antwort**.
-5.  **Update:** Klicke in Foundry auf **"Einfügen"** und dann auf **"Journal aktualisieren"**.
+### Workflow B: Grammatik-Check (Blauer Haken)
+1.  **Seiten wählen**: Wähle Seiten (auch bereits übersetzte) für die Grammatikprüfung.
+2.  **Prompt generieren**: Klicke auf **"Grammatik Check"**.
+3.  **KI-Verarbeitung**: Prompt bei ChatGPT/Claude einfügen -> Antwort kopieren (JSON).
+4.  **Update**: In Foundry einfügen -> **"Journal aktualisieren"**.
+5.  **Konfliktlösung**: Wenn die KI geschützte Begriffe ändern will (z.B. "Feuerball" -> "Flammenkugel"), erscheint ein Warndialog. Du entscheidest: Original behalten oder Änderung akzeptieren?
+6.  **Loop**: Nach der Lösung öffnet das Modul automatisch das nächste Fenster **automatisch vorausgewählt** für den Grammatik-Check.
 
 ---
 
@@ -110,14 +116,20 @@ This module helps you to translate **large adventure modules** or long texts in 
 
 ## 📖 How to Use
 
-1.  **Open the Translator:** Go to the Journal Directory and click the **"AI Translation Assistant"** button.
-2.  **Select Content:** Choose the Journal and Pages you want to translate.
-3.  **Generate Prompt:** The module generates an optimized prompt. Click **"Copy Prompt"**.
-4.  **AI Magic:** Paste the prompt into Gemini/ChatGPT and copy the **entire response**.
-5.  **Update:** Click **"Paste"** in Foundry and then **Update Journal**.
+### Workflow A: Translation (Green Check)
+1.  **Select Pages**: Choose the pages you want to translate.
+2.  **Generate Prompt**: Click **"Copy Prompt"**.
+3.  **AI Processing**: Paste into ChatGPT/Claude -> Copy Response (JSON).
+4.  **Update**: Paste into Foundry -> **"Update Journal"**.
+5.  **Loop**: The module automatically checks for remaining pages. If found, it opens the next window **pre-selected** for translation.
 
-4.  **AI Magic:** Paste the prompt into Gemini/ChatGPT and copy the **entire response**.
-5.  **Update:** Click **"Paste"** in Foundry and then **Update Journal**.
+### Workflow B: Grammar Check (Blue Spell Check)
+1.  **Select Pages**: Choose pages (even if already translated) to check grammar.
+2.  **Generate Prompt**: Click **"Grammar Check"**.
+3.  **AI Processing**: Paste into ChatGPT/Claude -> Copy Response (JSON).
+4.  **Update**: Paste into Foundry -> **"Update Journal"**.
+5.  **Conflict Resolution**: If the AI tries to change protected terms (like "Feuerball" -> "Flammenkugel"), a warning dialog appears. You decide: Keep Original or Accept Change?
+6.  **Loop**: After resolution, the module automatically opens the next window **pre-selected** for grammar check.
 
 ---
 
