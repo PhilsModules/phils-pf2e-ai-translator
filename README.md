@@ -37,10 +37,10 @@
 
 > [!NOTE]
 > ### 🤖 AI Compatibility & Token Limits / KI-Modelle & Limits
-> **English:** This module was developed and tested primarily with **Google Gemini (Pro/Advanced)**.
+> **English:** This module was developed and tested primarily for **Google Gemini (Pro/Advanced)**.
 > Every AI model has a specific limit on how much text it can process at once (Context Window / Token Limit). If you encounter errors (e.g., broken JSON or cut-off text), try **reducing the number of pages** selected for translation.
 >
-> **Deutsch:** Dieses Modul wurde primär mit **Google Gemini (Pro/Advanced)** entwickelt und getestet.
+> **Deutsch:** Dieses Modul wurde primär für **Google Gemini (Pro/Advanced)** entwickelt und getestet.
 > Jedes KI-Modell hat eine Obergrenze, wie viel Text es auf einmal verarbeiten kann (Kontext-Fenster / Token-Limit). Sollten Fehler auftreten (z. B. kaputtes JSON oder abgehackter Text), versuche bitte, die **Anzahl der gleichzeitig ausgewählten Seiten zu reduzieren**.
 
 
@@ -156,3 +156,4 @@ Portions of this module utilize data from the [Pathfinder German Translation mod
     <br><br>
     <p><i>Made with ❤️ for the Foundry VTT Community</i></p>
 </div>
+
