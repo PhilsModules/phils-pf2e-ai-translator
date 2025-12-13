@@ -1,4 +1,4 @@
-import { loc, resolvePrompt, getCleanData, getContextDescription, processUpdate, addToGlossary, MODULE_ID, injectOfficialTranslations, injectGlossaryMarkers, applyResolvedUpdate } from './TranslationLogic.js';
+import { loc, resolvePrompt, getCleanData, getContextDescription, processUpdate, addToGlossary, MODULE_ID, injectOfficialTranslations, injectGlossaryMarkers, applyResolvedUpdate, calculateTranslationStats } from './TranslationLogic.js';
 
 const { ApplicationV2, HandlebarsApplicationMixin } = foundry.applications.api;
 
@@ -45,7 +45,8 @@ export class TranslationAssistantApp extends HandlebarsApplicationMixin(Applicat
         return {
             labels: {
                 selectJournalHelp: loc('SelectJournalHelp') || "Please drop a Journal Entry here or select one.",
-                dropZone: loc('DropZone') || "Drag Journal Here"
+                dropZone: loc('DropZone') || "Drag Journal Here",
+                btnStats: loc('BtnStats') || "Statistics"
             }
         };
     }
@@ -83,6 +84,14 @@ export class TranslationAssistantApp extends HandlebarsApplicationMixin(Applicat
                 } else {
                     ui.notifications.warn(loc('WarnDropJournal') || "Please drop a Journal Entry or a Page.");
                 }
+            });
+        }
+
+        const statsBtn = html.querySelector('[data-action="open-stats"]');
+        if (statsBtn) {
+            statsBtn.addEventListener('click', async () => {
+                const stats = await calculateTranslationStats();
+                new TranslationStatsApp({ stats }).render(true);
             });
         }
     }
@@ -689,6 +698,42 @@ export class GlossaryUpdateApp extends HandlebarsApplicationMixin(ApplicationV2)
 
     static async myFormHandler(event, form, formData) { }
 }
+
+export class TranslationStatsApp extends HandlebarsApplicationMixin(ApplicationV2) {
+    constructor(options = {}) {
+        super(options);
+        this.stats = options.stats;
+        this.options.window.title = loc('StatsTitle') || "Translation Statistics";
+    }
+
+    static DEFAULT_OPTIONS = {
+        id: "translation-stats",
+        tag: "div",
+        window: {
+            title: "Statistics",
+            icon: "fas fa-chart-line",
+            resizable: false,
+            contentClasses: ["standard-form"]
+        },
+        position: {
+            width: 400,
+            height: "auto"
+        }
+    };
+
+    static PARTS = {
+        content: {
+            template: "modules/phils-pf2e-ai-translator/templates/translation-stats.hbs"
+        }
+    };
+
+    async _prepareContext(_options) {
+        return {
+            stats: this.stats
+        };
+    }
+}
+
 
 // --- Logic Helpers Adaptations ---
 

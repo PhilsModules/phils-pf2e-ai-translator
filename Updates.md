@@ -1,3 +1,9 @@
+## v1.4.0 - Retroactive Statistics
+*   **NEU: Übersetzungs-Statistik:** Ein neues Statistik-Feature (erreichbar über den "Statistik"-Button im Hauptmenü) zeigt dir genau an, wie viel Arbeit dir das Modul bereits abgenommen hat.
+    *   **Retroaktiv:** Zählt Wörter aller jemals mit dem Modul übersetzten Seiten.
+    *   **Detail-Ansicht:** Zeigt separate Wortzähler für "Übersetzung" und "Grammatik-Check".
+    *   **Zeit-Ersparnis:** Berechnet die gesparte Zeit basierend auf realistischen Werten (300 Wörter/Stunde für Übersetzung, 1000 Wörter/Stunde für Lektorat).
+
 ## v1.3.1 - Usability & Documentation
 *   **Documentation:** Eine umfangreiche, deutsche Anleitung (`anleitung.md`) ist nun direkt im Modul enthalten und über die `README.md` verlinkt.
 *   **Prompt-Marker:** Prompts und Antworten werden nun mit klaren Markern (`[ANFANG_DER_ANFRAGE]`, `[ENDE_DER_ANFRAGE]`) versehen, um das Kopieren sicherer zu machen.

@@ -1,0 +1,31 @@
+<div class="standard-form">
+    <div style="text-align: center; margin-bottom: 10px;">
+        <i class="fas fa-chart-line" style="font-size: 3em; color: var(--color-primary);"></i>
+        <h2>{{localize "PHILS_PF2E_AI_TRANSLATOR.UI.StatsTitle"}}</h2>
+    </div>
+
+    <div style="display: flex; justify-content: space-around; margin-bottom: 20px;">
+        <div style="text-align: center;">
+            <h3 style="margin-bottom: 5px;">{{stats.translatedWords}}</h3>
+            <p style="color: #888; margin-bottom: 5px;">{{localize "PHILS_PF2E_AI_TRANSLATOR.UI.StatsTranslationWords"}}
+            </p>
+            <p style="font-size: 0.8em; color: var(--color-text-light-highlight);">~{{stats.hoursTranslation}}
+                {{localize "PHILS_PF2E_AI_TRANSLATOR.UI.UnitHours"}}</p>
+        </div>
+        <div style="text-align: center;">
+            <h3 style="margin-bottom: 5px;">{{stats.grammarWords}}</h3>
+            <p style="color: #888; margin-bottom: 5px;">{{localize "PHILS_PF2E_AI_TRANSLATOR.UI.StatsGrammarWords"}}</p>
+            <p style="font-size: 0.8em; color: var(--color-text-light-highlight);">~{{stats.hoursGrammar}} {{localize
+                "PHILS_PF2E_AI_TRANSLATOR.UI.UnitHours"}}</p>
+        </div>
+    </div>
+
+    <hr>
+
+    <div style="text-align: center; margin: 20px 0;">
+        <h1 style="font-size: 3em; color: var(--color-text-light-highlight);">{{stats.hoursSaved}} {{localize
+            "PHILS_PF2E_AI_TRANSLATOR.UI.UnitHours"}}</h1>
+        <p style="font-weight: bold;">{{localize "PHILS_PF2E_AI_TRANSLATOR.UI.StatsHoursSaved"}}</p>
+        <p style="font-size: 0.8em; color: #666;"><i>{{localize "PHILS_PF2E_AI_TRANSLATOR.UI.StatsFooter"}}</i></p>
+    </div>
+</div>

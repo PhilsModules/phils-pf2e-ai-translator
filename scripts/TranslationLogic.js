@@ -3,6 +3,54 @@ console.log("!!! PHILS TRANSLATOR LOGIC LOADED v4.4 - SCOPE AWARENESS !!!");
 import { DictionaryLoader } from "./DictionaryLoader.js";
 import { TermReplacer } from "./TermReplacer.js";
 
+export async function calculateTranslationStats() {
+    let translatedWords = 0;
+    let grammarWords = 0;
+
+    // Iterate all journals
+    const journals = game.journal;
+    for (const journal of journals) {
+        for (const page of journal.pages) {
+            const flags = page.flags['phils-pf2e-ai-translator'];
+            if (!flags) continue;
+
+            // Strip HTML to get rough word count
+            let text = "";
+            if (page.text && page.text.content) {
+                text = page.text.content.replace(/<[^>]*>?/gm, '');
+            } else {
+                continue;
+            }
+
+            const wordCount = text.trim().split(/\s+/).length;
+
+            if (flags.aiProcessed) {
+                translatedWords += wordCount;
+            }
+            // Additive: A page could be both translated AND grammar checked (later)
+            if (flags.aiGrammarChecked) {
+                grammarWords += wordCount;
+            }
+        }
+    }
+
+    // Assumptions:
+    // Translation: 300 words / hour
+    // Grammar: 1000 words / hour
+
+    const timeTranslation = translatedWords / 300;
+    const timeGrammar = grammarWords / 1000;
+    const totalHours = timeTranslation + timeGrammar;
+
+    return {
+        translatedWords: translatedWords.toLocaleString(),
+        grammarWords: grammarWords.toLocaleString(),
+        hoursTranslation: timeTranslation.toFixed(1),
+        hoursGrammar: timeGrammar.toFixed(1),
+        hoursSaved: totalHours.toFixed(1)
+    };
+}
+
 export function formatString(str, data = {}) {
     if (!str) return "";
     if (Array.isArray(str)) str = str.join("\n");
