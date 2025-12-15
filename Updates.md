@@ -1,3 +1,6 @@
+## v1.4.4 - UI Label Refinement
+*   **UI Anpassung:** Die Beschriftungen des "Insert AI Response" (Smart Paste) Dialogs wurden angepasst, um die Bedienung intuitiver zu gestalten.
+
 ## v1.4.3 - Prompt Precision & Code Cleanup
 *   **Prompt-Optimierung:** Die Anweisung für das Namens-Format wurde sprachlich und logisch präzisiert ("außer im Glossar"), um Konflikte mit dem Glossar-Namen ("AI Glossary") zu vermeiden.
 *   **Code-Optimierung:** Bereinigung interner Logik und Entfernung von Debug-Artefakten für eine sauberere Codebasis.
