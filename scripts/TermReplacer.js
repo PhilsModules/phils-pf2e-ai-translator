@@ -37,12 +37,18 @@ export class TermReplacer {
 
         const replacedTerms = new Map(); // Use Map to track unique replacements by original term
 
-        // Split by HTML tags to only replace in text content
-        // This regex captures the tags so we can interleave them back
-        const parts = text.split(/(<[^>]*>)/g);
+        // PROTETION REGEX:
+        // 1. HTML Tags: <...>
+        // 2. Foundry Links: @Tag[...] or @Tag[...]{...}
+        // 3. Inline Rolls/Macros: [[...]]
+        // We use capturing groups to include the separators in the split result.
+        const protectionRegex = /((?:<[^>]+>)|(?:@[a-zA-Z0-9]+\[[^\]]*\](?:\{[^}]*\})?)|(?:\[\[.*?\]\]))/g;
 
-        const newText = parts.map(part => {
-            if (part.startsWith("<")) return part; // It's a tag, return as is
+        const parts = text.split(protectionRegex);
+
+        const newText = parts.map((part, index) => {
+            // Odd indices in split results with capturing regex are the separators (the protected parts)
+            if (index % 2 === 1) return part;
 
             // Replace terms in the text content
             return part.replace(this._regexCache, (match) => {

@@ -1,3 +1,12 @@
+## v1.4.6 - System Tag Protection & Critical Fix
+*   **Critical Fix: Pre-Translation Corruption:** Behoben eines kritischen Fehlers, bei dem System-Tags (`@Check`, `@UUID`) bereits *bevor* sie zur KI gesendet wurden fehlerhaft übersetzt wurden (z.B. durch interne Glossar-Injection). Das Modul ignoriert nun System-Tags und Inline-Rolls korrekt bei der Vorverarbeitung.
+*   **Fix: System Tags (`@Check`, `@UUID`):** Die KI-Prompts (DE/EN) wurden aktualisiert, um Pf2e-System-Tags strikt zu schützen. Die KI darf den Inhalt von `@Check[...]` und `@UUID[...]` Klammern nicht mehr übersetzen (kein "Wurf" oder "Gegenstand" mehr).
+*   **Fix: Inline Rolls (`[[/gmroll]]`):** Inline-Rolls und Würfel-Notation (z.B. `1d6`) innerhalb von `[[...]]` werden nun explizit vor Übersetzung geschützt (verhindert `1w6`).
+
+
+## v1.4.5 - Clarity Update
+*   **Prompt-Optimierung:** Die Prompts und UI-Labels wurden weiter verfeinert, um noch klarer zu machen, wo welcher JSON-Teil einzufügen ist ("BLOCK 1 (Journal)" vs "BLOCK 2 (Glossar)").
+
 ## v1.4.4 - UI Label Refinement
 *   **UI Anpassung:** Die Beschriftungen des "Insert AI Response" (Smart Paste) Dialogs wurden angepasst, um die Bedienung intuitiver zu gestalten.
 
