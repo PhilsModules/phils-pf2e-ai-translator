@@ -3,7 +3,7 @@
 # Phil's PF2e AI Translator
 
 ![Foundry v13 Compatible](https://img.shields.io/badge/Foundry-v13-brightgreen?style=flat-square) ![Foundry v12 Compatible](https://img.shields.io/badge/Foundry-v12-green?style=flat-square) ![System](https://img.shields.io/badge/System-PF2e-blue?style=flat-square)
-![License](https://img.shields.io/badge/License-GPLv3-blue?style=flat-square) [![Version](https://img.shields.io/badge/Version-1.4.7-orange?style=flat-square)](https://github.com/PhilsModules/phils-pf2e-ai-translator/releases) [![Patreon](https://img.shields.io/badge/SUPPORT-Patreon-ff424d?style=flat-square&logo=patreon)](https://www.patreon.com/PhilsModules)
+![License](https://img.shields.io/badge/License-GPLv3_%2F_CC_BY--NC--ND-blue?style=flat-square) [![Version](https://img.shields.io/badge/Version-1.4.7-orange?style=flat-square)](https://github.com/PhilsModules/phils-pf2e-ai-translator/releases) [![Patreon](https://img.shields.io/badge/SUPPORT-Patreon-ff424d?style=flat-square&logo=patreon)](https://www.patreon.com/PhilsModules)
 
 <br>
 
@@ -207,11 +207,32 @@ Portions of this module utilize data from the [Pathfinder German Translation mod
 >
 > **Copyright (c) 2023 Marco Seither**
 >
-> Permission is hereby granted, free of charge, to any person obtaining a copy of this software...
+> Permission is hereby granted, free of charge, to any person obtaining a copy
+>of this software and associated documentation files (the "Software"), to deal
+>in the Software without restriction, including without limitation the rights
+>to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+>copies of the Software, and to permit persons to whom the Software is
+>furnished to do so, subject to the following conditions:
+>
+>The above copyright notice and this permission notice shall be included in all
+>copies or substantial portions of the Software.
+>
+>THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+>IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+>FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+>AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+>LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+>OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+>SOFTWARE.
 
 ## Module License
 
-**Phil's PF2e AI Translator** is licensed under the [GPL-3.0 License](LICENSE).
+This module uses a dual license structure.
+
+- **Code:** GNU GPLv3
+- **Assets:** CC BY-NC-ND 4.0
+
+See `LICENSE` file for details.
 
 <br>
 
